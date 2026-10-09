@@ -52,6 +52,7 @@ const Safety = () => {
       const { data, error } = await supabase.functions.invoke("analyze-photo", {
         body: {
           image: base64Image,
+          imageMimeType: imageFile.type,
           notes: userNotes,
         },
       });

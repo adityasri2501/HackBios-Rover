@@ -12,108 +12,98 @@ serve(async (req) => {
   }
 
   try {
-    const { image, notes } = await req.json();
-    
-    console.log("Analyzing photo with AI...");
-    
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) {
-      throw new Error("LOVABLE_API_KEY not configured");
+    const { image, imageMimeType, notes } = await req.json();
+    if (typeof image !== "string" || !image) {
+      return new Response(JSON.stringify({ error: "An image is required.", hazards: [] }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
-    // Call Lovable AI for image analysis
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [
-          {
-            role: "system",
-            content: "You are a mining safety expert AI. Analyze photos for safety hazards including missing PPE, structural issues, equipment problems, spills, and unsafe conditions. Return a JSON array of detected hazards with tag, confidence (0-1), and notes. Be thorough and specific.",
+    const mimeType = ["image/jpeg", "image/png", "image/webp"].includes(imageMimeType)
+      ? imageMimeType
+      : "image/jpeg";
+    const geminiApiKey = Deno.env.get("GEMINI_API_KEY");
+    if (!geminiApiKey) {
+      throw new Error("GEMINI_API_KEY is not configured in Supabase function secrets.");
+    }
+
+    const response = await fetch(
+      "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-goog-api-key": geminiApiKey,
+        },
+        body: JSON.stringify({
+          systemInstruction: {
+            parts: [{
+              text: "You are a mining safety expert. Inspect the image for hazards such as missing PPE, structural issues, equipment problems, spills, and unsafe conditions. Be specific and cautious. Return a JSON object with a hazards array. Each hazard must have tag (string), confidence (number from 0 to 1), and notes (string). If no hazards are visible, return an empty hazards array.",
+            }],
           },
-          {
+          contents: [{
             role: "user",
-            content: [
+            parts: [
               {
-                type: "text",
-                text: `Analyze this mining site photo for safety hazards. Additional context: ${notes || "None provided"}. Return ONLY a valid JSON object with this structure: {"hazards": [{"tag": "hazard name", "confidence": 0.85, "notes": "description"}]}`,
+                text: `Analyze this mining site photo for safety hazards. Additional context: ${notes || "None provided"}.`,
               },
               {
-                type: "image_url",
-                image_url: {
-                  url: `data:image/jpeg;base64,${image}`,
+                inline_data: {
+                  mime_type: mimeType,
+                  data: image,
                 },
               },
             ],
-          },
-        ],
-      }),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error("AI API error:", response.status, errorText);
-      throw new Error(`AI analysis failed: ${response.status}`);
-    }
-
-    const data = await response.json();
-    const aiResponse = data.choices?.[0]?.message?.content || "";
-    
-    console.log("AI Response:", aiResponse);
-
-    // Parse AI response
-    let parsedResponse;
-    try {
-      // Try to extract JSON from the response
-      const jsonMatch = aiResponse.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        parsedResponse = JSON.parse(jsonMatch[0]);
-      } else {
-        // Fallback to creating a response from the text
-        parsedResponse = {
-          hazards: [{
-            tag: "General Safety Concern",
-            confidence: 0.7,
-            notes: aiResponse.substring(0, 200),
           }],
-        };
-      }
-    } catch (parseError) {
-      console.error("Failed to parse AI response:", parseError);
-      parsedResponse = {
-        hazards: [{
-          tag: "Analysis Required",
-          confidence: 0.5,
-          notes: "Manual review recommended",
-        }],
-      };
+          generationConfig: {
+            responseMimeType: "application/json",
+          },
+        }),
+      },
+    );
+
+    const result = await response.json();
+    if (!response.ok) {
+      const message = result.error?.message || `Gemini API returned status ${response.status}.`;
+      console.error("Gemini API error:", response.status, message);
+      throw new Error(message);
     }
 
-    // Ensure hazards is an array
-    const hazards = Array.isArray(parsedResponse.hazards) 
-      ? parsedResponse.hazards 
+    const aiResponse = result.candidates?.[0]?.content?.parts
+      ?.map((part: { text?: string }) => part.text || "")
+      .join("")
+      .trim();
+    if (!aiResponse) {
+      throw new Error("Gemini returned an empty analysis. Please try another image.");
+    }
+
+    const parsed = JSON.parse(aiResponse);
+    const hazards = Array.isArray(parsed.hazards)
+      ? parsed.hazards
+          .filter((hazard: unknown) => typeof hazard === "object" && hazard !== null)
+          .map((hazard: { tag?: unknown; confidence?: unknown; notes?: unknown }) => ({
+            tag: typeof hazard.tag === "string" ? hazard.tag : "Safety concern",
+            confidence: typeof hazard.confidence === "number"
+              ? Math.max(0, Math.min(1, hazard.confidence))
+              : 0.5,
+            notes: typeof hazard.notes === "string" ? hazard.notes : "Manual review recommended.",
+          }))
       : [];
 
     return new Response(
       JSON.stringify({
         hazards,
-        annotatedImage: `data:image/jpeg;base64,${image}`, // In production, would overlay bounding boxes
+        annotatedImage: `data:${mimeType};base64,${image}`,
       }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   } catch (error) {
     console.error("Error in analyze-photo function:", error);
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
     return new Response(
-      JSON.stringify({ 
-        error: errorMessage,
-        hazards: [],
-      }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      JSON.stringify({ error: errorMessage, hazards: [] }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   }
 });

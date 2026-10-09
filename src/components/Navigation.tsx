@@ -1,5 +1,6 @@
 import { Link, useLocation } from "react-router-dom";
-import { Activity, Camera } from "lucide-react";
+import { Bot, Camera, ExternalLink } from "lucide-react";
+import { ROVER_URL } from "@/lib/rover";
 
 const Navigation = () => {
   const location = useLocation();
@@ -19,17 +20,16 @@ const Navigation = () => {
             </Link>
             
             <nav className="flex gap-1">
-              <Link
-                to="/heatmap"
-                className={`flex items-center gap-2 px-4 py-2 rounded-md transition-colors ${
-                  isActive("/heatmap")
-                    ? "bg-primary text-primary-foreground"
-                    : "text-header-foreground hover:bg-secondary"
-                }`}
+              <a
+                href={ROVER_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 px-4 py-2 rounded-md transition-colors text-header-foreground hover:bg-secondary"
               >
-                <Activity className="w-4 h-4" />
-                Risk Heatmap
-              </Link>
+                <Bot className="w-4 h-4" />
+                Rover
+                <ExternalLink className="w-3.5 h-3.5" />
+              </a>
               <Link
                 to="/safety"
                 className={`flex items-center gap-2 px-4 py-2 rounded-md transition-colors ${
