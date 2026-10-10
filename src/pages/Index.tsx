@@ -1,109 +1,152 @@
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ROVER_URL } from "@/lib/rover";
-import { AlertTriangle, Camera, Shield, Bot, ExternalLink } from "lucide-react";
-
+import {
+  Camera,
+  Bot,
+  ExternalLink,
+  CalendarCheck,
+  ClipboardEdit,
+  LogOut,
+  ShieldCheck,
+} from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/components/ui/use-toast";
 
 const Index = () => {
   const navigate = useNavigate();
 
+  const handleLogout = async () => {
+    const { error } = await supabase.auth.signOut();
+
+    if (error) {
+      toast({
+        title: "Logout failed",
+        description: error.message,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    navigate("/login", { replace: true });
+  };
+
+  const cards = [
+    {
+      title: "Analyze Image & Add Attendance",
+      description:
+        "Analyze worker photos, check visible PPE and register workers with attendance.",
+      icon: Camera,
+      action: () => navigate("/safety"),
+      buttonText: "Analyze & Register",
+    },
+    {
+      title: "Rover",
+      description:
+        "Open the existing MineScan rover dashboard for remote monitoring.",
+      icon: Bot,
+      action: () => window.open(ROVER_URL, "_blank", "noopener,noreferrer"),
+      buttonText: "Open Rover",
+      external: true,
+    },
+    {
+      title: "Today's Attendance",
+      description:
+        "View today's worker attendance, entry time, exit time and current status.",
+      icon: CalendarCheck,
+      action: () => navigate("/attendance"),
+      buttonText: "View Attendance",
+    },
+    {
+      title: "Modify Attendance",
+      description:
+        "Review existing attendance records and make authorized corrections.",
+      icon: ClipboardEdit,
+      action: () => navigate("/modify-attendance"),
+      buttonText: "Modify Records",
+    },
+  ];
+
   return (
     <div className="min-h-screen bg-background">
-      <header className="bg-header border-b border-border">
-        <div className="container mx-auto px-4 py-6">
-          <div className="flex items-center gap-2">
-            <div className="w-10 h-10 bg-primary rounded flex items-center justify-center">
-              <span className="text-white font-bold text-xl">MS</span>
+      <header className="border-b border-border bg-header">
+        <div className="container mx-auto flex items-center justify-between px-4 py-4">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded bg-primary">
+              <span className="text-xl font-bold text-white">MS</span>
             </div>
-            <span className="text-header-foreground font-bold text-2xl">MineScan</span>
+
+            <div>
+              <h1 className="text-xl font-bold text-header-foreground">
+                MineScan
+              </h1>
+              <p className="text-xs text-muted-foreground">
+                Mining Safety Dashboard
+              </p>
+            </div>
           </div>
+
+          <Button variant="outline" onClick={handleLogout}>
+            <LogOut className="mr-2 h-4 w-4" />
+            Logout
+          </Button>
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-16">
-        <div className="max-w-4xl mx-auto text-center mb-16">
-          <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-4 py-2 rounded-full mb-6">
-            <Shield className="w-4 h-4" />
-            <span className="text-sm font-medium">Mining Safety Platform</span>
+      <main className="container mx-auto px-4 py-10 md:py-14">
+        <div className="mb-10">
+          <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-2 text-primary">
+            <ShieldCheck className="h-4 w-4" />
+            <span className="text-sm font-medium">
+              Mining Safety Platform
+            </span>
           </div>
-          
-          <h1 className="text-5xl font-bold text-foreground mb-6">
-            Advanced Safety Intelligence for Mining Operations
-          </h1>
-          <p className="text-xl text-muted-foreground mb-8">
-            Real-time hazard monitoring and AI-powered photo analysis to keep your sites safe
+
+          <h2 className="mb-3 text-3xl font-bold text-foreground md:text-4xl">
+            MineScan Dashboard
+          </h2>
+
+          <p className="max-w-2xl text-muted-foreground">
+            Manage worker safety, monitor attendance and access the rover from
+            one place.
           </p>
-
-          <div className="flex gap-4 justify-center">
-
-            <Button
-              onClick={() => navigate("/safety")}
-              size="lg"
-              variant="outline"
-              className="border-border text-lg px-8"
-            >
-              <Camera className="w-5 h-5 mr-2" />
-              Analyze Photo
-            </Button>
-            <a
-              href={ROVER_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center justify-center rounded-md border border-border px-8 text-lg font-medium h-11 transition-colors hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              aria-label="Open Rover dashboard in a new tab"
-            >
-              <Bot className="w-5 h-5 mr-2" />
-              Rover
-              <ExternalLink className="w-4 h-4 ml-2" />
-            </a>
-          </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
-          <div className="bg-card border border-border rounded-lg p-8 text-center">
-            <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Shield className="w-6 h-6 text-primary" />
-            </div>
-            <h3 className="text-xl font-bold text-foreground mb-3">PPE &amp; Worker Safety</h3>
-            <p className="text-muted-foreground">
-              Spot visible gaps in protective equipment, including helmets and high-visibility gear.
-            </p>
-          </div>
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-4">
+          {cards.map((card) => {
+            const Icon = card.icon;
 
-          <div className="bg-card border border-border rounded-lg p-8 text-center">
-            <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
-              <AlertTriangle className="w-6 h-6 text-primary" />
-            </div>
-            <h3 className="text-xl font-bold text-foreground mb-3">Site &amp; Equipment Hazards</h3>
-            <p className="text-muted-foreground">
-              Review photos for spills, unsafe equipment, structural concerns, and other visible risks.
-            </p>
-          </div>
+            return (
+              <div
+                key={card.title}
+                className="flex min-h-[280px] flex-col rounded-xl border border-border bg-card p-6 transition-shadow hover:shadow-lg"
+              >
+                <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
+                  <Icon className="h-6 w-6 text-primary" />
+                </div>
 
-          <div className="bg-card border border-border rounded-lg p-8 text-center">
-            <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Camera className="w-6 h-6 text-primary" />
-            </div>
-            <h3 className="text-xl font-bold text-foreground mb-3">AI-Assisted Photo Review</h3>
-            <p className="text-muted-foreground">
-              Add site context, analyze a photo, and review detected concerns with confidence scores.
-            </p>
-          </div>
+                <h3 className="mb-3 text-lg font-bold text-foreground">
+                  {card.title}
+                  {"external" in card && card.external && (
+                    <ExternalLink className="ml-2 inline h-4 w-4" />
+                  )}
+                </h3>
+
+                <p className="mb-6 flex-1 text-sm leading-6 text-muted-foreground">
+                  {card.description}
+                </p>
+
+                <Button className="w-full" onClick={card.action}>
+                  {card.buttonText}
+                </Button>
+              </div>
+            );
+          })}
         </div>
-        <div className="bg-card border border-border rounded-lg p-12 text-center">
-          <h2 className="text-3xl font-bold text-foreground mb-4">Ready to enhance site safety?</h2>
-          <p className="text-muted-foreground mb-8">
-            Start monitoring hazards and analyzing safety photos today
-          </p>
-          <div className="flex gap-4 justify-center">
-            <Button
-              onClick={() => navigate("/heatmap")}
-              className="bg-primary hover:bg-primary/90"
-            >
-              Get Started
-            </Button>
-          </div>
-        </div>
+
+        <p className="mt-8 text-center text-xs text-muted-foreground">
+          MineScan · Worker Safety & Attendance Management
+        </p>
       </main>
     </div>
   );
