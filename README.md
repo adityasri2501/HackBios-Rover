@@ -7,9 +7,11 @@
   <img src="https://img.shields.io/badge/Supabase-Postgres-3ECF8E?style=for-the-badge&logo=supabase" alt="Supabase" />
 </p>
 
-A modern mining safety and workforce management platform built for real-world safety operations. This project combines PPE inspection, attendance tracking, hazard monitoring, and remote rover access into a single dashboard.
+A modern mining safety and workforce management platform built for real-world safety operations. This project combines PPE inspection, attendance tracking, hazard monitoring, and remote rover access for mining teams.
 
 Live Demo: https://hack-bios-rover.vercel.app
+
+Video Demo: https://www.youtube.com/shorts/rsTL63lPHdQ?si=A1TVd2HE-u_kVX76
 
 ## Overview
 
@@ -219,7 +221,7 @@ Contributions are welcome. If you’d like to improve the project:
 
 ## Notes
 
-This repository is built as a modern TypeScript application focused on mining safety, attendance, and operational monitoring. It is particularly useful for organizations that need a single interface to manage worker compliance, exposure risk, and field operations.
+This repository is built as a modern TypeScript application focused on mining safety, attendance, and operational monitoring. It is particularly useful for organizations that need a single interface to manage PPE compliance, worker tracking, and hazard monitoring in the field.
 
 ## Contact
 
